@@ -1,0 +1,322 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { Printer, Search, Trash2 } from "lucide-react";
+
+interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  image_url?: string;
+  is_available: boolean;
+}
+
+interface CartItem extends MenuItem {
+  quantity: number;
+}
+
+export function POSSystem() {
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchMenuItems();
+  }, []);
+
+  const fetchMenuItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("menu_items")
+        .select("*")
+        .eq("is_available", true)
+        .order("name");
+
+      if (error) throw error;
+
+      setMenuItems(data || []);
+      
+      // Extract unique categories
+      const uniqueCategories = [...new Set(data?.map(item => item.category) || [])];
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error("Error fetching menu items:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load menu items",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addToCart = (item: MenuItem) => {
+    setCartItems(prev => {
+      const existing = prev.find(cartItem => cartItem.id === item.id);
+      if (existing) {
+        return prev.map(cartItem =>
+          cartItem.id === item.id
+            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            : cartItem
+        );
+      }
+      return [...prev, { ...item, quantity: 1 }];
+    });
+  };
+
+  const removeFromCart = (itemId: string) => {
+    setCartItems(prev => prev.filter(item => item.id !== itemId));
+  };
+
+  const updateQuantity = (itemId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(itemId);
+      return;
+    }
+    setCartItems(prev =>
+      prev.map(item =>
+        item.id === itemId ? { ...item, quantity } : item
+      )
+    );
+  };
+
+  const getTotalAmount = () => {
+    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
+  const processOrder = async () => {
+    if (cartItems.length === 0) {
+      toast({
+        title: "Empty Cart",
+        description: "Please add items to cart before processing order",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          total_amount: getTotalAmount(),
+          status: "completed",
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = cartItems.map(item => ({
+        order_id: order.id,
+        menu_item_id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      // Update inventory
+      for (const item of cartItems) {
+        await supabase
+          .from("inventory")
+          .update({
+            quantity_on_hand: supabase.raw("quantity_on_hand - ?", [item.quantity])
+          })
+          .eq("menu_item_id", item.id);
+      }
+
+      toast({
+        title: "Order Processed",
+        description: `Order #${order.order_number} has been completed successfully`,
+      });
+
+      // Clear cart
+      setCartItems([]);
+    } catch (error) {
+      console.error("Error processing order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process order",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const printReceipt = () => {
+    const receiptContent = `
+      ORIJINS POS SYSTEM
+      ------------------
+      ${new Date().toLocaleString()}
+      
+      ${cartItems.map(item => 
+        `${item.name} x${item.quantity} - $${(item.price * item.quantity).toFixed(2)}`
+      ).join('\n')}
+      
+      ------------------
+      Total: $${getTotalAmount().toFixed(2)}
+      
+      Thank you for your business!
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`<pre>${receiptContent}</pre>`);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const filteredItems = menuItems.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-96">Loading...</div>;
+  }
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* Menu Items Section */}
+      <div className="flex-1 p-6">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold mb-4">Menu Items</h2>
+          
+          {/* Search and Filter */}
+          <div className="flex gap-4 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 border rounded-md"
+            >
+              <option value="all">All Categories</option>
+              {categories.map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Menu Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredItems.map(item => (
+            <Card
+              key={item.id}
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => addToCart(item)}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">{item.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center">
+                  <Badge variant="secondary">{item.category}</Badge>
+                  <span className="font-bold">${item.price.toFixed(2)}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Cart Section */}
+      <div className="w-96 bg-card border-l p-6">
+        <h2 className="text-xl font-bold mb-4">Current Order</h2>
+        
+        <div className="space-y-3 mb-6">
+          {cartItems.length === 0 ? (
+            <p className="text-muted-foreground">No items in cart</p>
+          ) : (
+            cartItems.map(item => (
+              <div key={item.id} className="flex justify-between items-center p-3 bg-background rounded">
+                <div className="flex-1">
+                  <div className="font-medium">{item.name}</div>
+                  <div className="text-sm text-muted-foreground">${item.price.toFixed(2)} each</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                  >
+                    -
+                  </Button>
+                  <span className="w-8 text-center">{item.quantity}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                  >
+                    +
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => removeFromCart(item.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <Separator className="my-4" />
+        
+        <div className="space-y-4">
+          <div className="flex justify-between text-lg font-bold">
+            <span>Total:</span>
+            <span>${getTotalAmount().toFixed(2)}</span>
+          </div>
+          
+          <div className="space-y-2">
+            <Button 
+              className="w-full" 
+              onClick={processOrder}
+              disabled={cartItems.length === 0}
+            >
+              Process Order
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={printReceipt}
+              disabled={cartItems.length === 0}
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print Receipt
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
