@@ -21,6 +21,13 @@ interface CartItem extends MenuItem {
   quantity: number;
 }
 
+interface Order {
+  id: string;
+  order_number: string;
+  total_amount: number;
+  status: string;
+}
+
 export function POSSystem() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -36,7 +43,7 @@ export function POSSystem() {
 
   const fetchMenuItems = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("menu_items")
         .select("*")
         .eq("is_available", true)
@@ -47,7 +54,7 @@ export function POSSystem() {
       setMenuItems(data || []);
       
       // Extract unique categories
-      const uniqueCategories = [...new Set(data?.map(item => item.category) || [])];
+      const uniqueCategories = [...new Set(data?.map((item: any) => item.category) || [])] as string[];
       setCategories(uniqueCategories);
     } catch (error) {
       console.error("Error fetching menu items:", error);
@@ -107,7 +114,7 @@ export function POSSystem() {
 
     try {
       // Create order
-      const { data: order, error: orderError } = await supabase
+      const { data: order, error: orderError } = await (supabase as any)
         .from("orders")
         .insert({
           total_amount: getTotalAmount(),
@@ -123,28 +130,37 @@ export function POSSystem() {
         order_id: order.id,
         menu_item_id: item.id,
         quantity: item.quantity,
-        price: item.price,
+        unit_price: item.price,
+        total_price: item.price * item.quantity,
       }));
 
-      const { error: itemsError } = await supabase
+      const { error: itemsError } = await (supabase as any)
         .from("order_items")
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
 
-      // Update inventory
+      // Update inventory - using a simpler approach without raw SQL
       for (const item of cartItems) {
-        await supabase
+        const { data: inventory } = await (supabase as any)
           .from("inventory")
-          .update({
-            quantity_on_hand: supabase.raw("quantity_on_hand - ?", [item.quantity])
-          })
-          .eq("menu_item_id", item.id);
+          .select("current_stock")
+          .eq("menu_item_id", item.id)
+          .single();
+        
+        if (inventory) {
+          await (supabase as any)
+            .from("inventory")
+            .update({
+              current_stock: Math.max(0, inventory.current_stock - item.quantity)
+            })
+            .eq("menu_item_id", item.id);
+        }
       }
 
       toast({
         title: "Order Processed",
-        description: `Order #${order.order_number} has been completed successfully`,
+        description: `Order #${order?.order_number || order?.id} has been completed successfully`,
       });
 
       // Clear cart

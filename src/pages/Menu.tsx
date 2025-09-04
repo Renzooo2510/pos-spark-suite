@@ -55,7 +55,7 @@ export default function Menu() {
 
   const fetchMenuItems = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("menu_items")
         .select("*")
         .order("name");
@@ -74,7 +74,7 @@ export default function Menu() {
 
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("categories")
         .select("*")
         .eq("is_active", true)
@@ -89,7 +89,7 @@ export default function Menu() {
 
   const handleAddItem = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("menu_items")
         .insert([newItem])
         .select()
@@ -126,7 +126,7 @@ export default function Menu() {
     if (!editingItem) return;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("menu_items")
         .update(editingItem)
         .eq("id", editingItem.id)
@@ -158,7 +158,7 @@ export default function Menu() {
     if (!confirm("Are you sure you want to delete this item?")) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("menu_items")
         .delete()
         .eq("id", id);
