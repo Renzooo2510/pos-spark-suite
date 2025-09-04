@@ -21,7 +21,8 @@ interface MenuItem {
   name: string;
   description?: string;
   price: number;
-  category: string;
+  category_id: string;
+  size: string;
   image_url?: string;
   is_available: boolean;
 }
@@ -42,7 +43,8 @@ export default function Menu() {
     name: "",
     description: "",
     price: 0,
-    category: "",
+    category_id: "",
+    size: "16oz",
     image_url: "",
     is_available: true,
   });
@@ -57,7 +59,10 @@ export default function Menu() {
     try {
       const { data, error } = await (supabase as any)
         .from("menu_items")
-        .select("*")
+        .select(`
+          *,
+          categories(name)
+        `)
         .order("name");
 
       if (error) throw error;
@@ -102,7 +107,8 @@ export default function Menu() {
         name: "",
         description: "",
         price: 0,
-        category: "",
+        category_id: "",
+        size: "16oz",
         image_url: "",
         is_available: true,
       });
@@ -227,16 +233,35 @@ export default function Menu() {
                 <Label htmlFor="category">Category</Label>
                 <select
                   id="category"
-                  value={newItem.category}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, category: e.target.value }))}
+                  value={newItem.category_id}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, category_id: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-md"
                 >
                   <option value="">Select Category</option>
                   {categories.map(category => (
-                    <option key={category.id} value={category.name}>
+                    <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
                   ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="size">Size</Label>
+                <select
+                  id="size"
+                  value={newItem.size}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, size: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-md"
+                  disabled={categories.find(c => c.id === newItem.category_id)?.name === 'Hot Coffee'}
+                >
+                  {categories.find(c => c.id === newItem.category_id)?.name === 'Hot Coffee' ? (
+                    <option value="8oz">8oz (Hot Coffee only)</option>
+                  ) : (
+                    <>
+                      <option value="16oz">16oz</option>
+                      <option value="22oz">22oz</option>
+                    </>
+                  )}
                 </select>
               </div>
               <div className="flex items-center space-x-2">
@@ -285,9 +310,12 @@ export default function Menu() {
                 <Badge variant={item.is_available ? "default" : "secondary"}>
                   {item.is_available ? "Available" : "Unavailable"}
                 </Badge>
-                <span className="font-bold text-lg">${item.price.toFixed(2)}</span>
+                <span className="font-bold text-lg">₱{item.price.toFixed(2)}</span>
               </div>
-              <Badge variant="outline">{item.category}</Badge>
+              <div className="flex gap-2">
+                <Badge variant="outline">{(item as any).categories?.name}</Badge>
+                <Badge variant="outline">{item.size}</Badge>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -331,16 +359,35 @@ export default function Menu() {
                 <Label htmlFor="edit-category">Category</Label>
                 <select
                   id="edit-category"
-                  value={editingItem.category}
-                  onChange={(e) => setEditingItem(prev => prev ? { ...prev, category: e.target.value } : null)}
+                  value={editingItem.category_id}
+                  onChange={(e) => setEditingItem(prev => prev ? { ...prev, category_id: e.target.value } : null)}
                   className="w-full px-3 py-2 border rounded-md"
                 >
                   <option value="">Select Category</option>
                   {categories.map(category => (
-                    <option key={category.id} value={category.name}>
+                    <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
                   ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="edit-size">Size</Label>
+                <select
+                  id="edit-size"
+                  value={editingItem.size}
+                  onChange={(e) => setEditingItem(prev => prev ? { ...prev, size: e.target.value } : null)}
+                  className="w-full px-3 py-2 border rounded-md"
+                  disabled={categories.find(c => c.id === editingItem.category_id)?.name === 'Hot Coffee'}
+                >
+                  {categories.find(c => c.id === editingItem.category_id)?.name === 'Hot Coffee' ? (
+                    <option value="8oz">8oz (Hot Coffee only)</option>
+                  ) : (
+                    <>
+                      <option value="16oz">16oz</option>
+                      <option value="22oz">22oz</option>
+                    </>
+                  )}
                 </select>
               </div>
               <div className="flex items-center space-x-2">

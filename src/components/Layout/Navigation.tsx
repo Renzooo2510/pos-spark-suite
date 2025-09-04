@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   ShoppingCart,
-  MenuIcon,
+  UtensilsCrossed,
   Users,
   TrendingUp,
   FileText,
@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const navigationItems = [
   { name: "POS", href: "/", icon: ShoppingCart },
-  { name: "Menu", href: "/menu", icon: MenuIcon },
+  { name: "Menu", href: "/menu", icon: UtensilsCrossed },
   { name: "Accounts", href: "/accounts", icon: Users },
   { name: "Sales", href: "/sales", icon: Receipt },
   { name: "Inventory", href: "/inventory", icon: Package },
