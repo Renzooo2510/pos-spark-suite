@@ -1,15 +1,7 @@
-import { Navigation } from "@/components/Layout/Navigation";
-import { POSSystem } from "@/components/POS/POSSystem";
+import { CustomerMenu } from "@/components/CustomerMenu/CustomerMenu";
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen bg-background">
-      <Navigation />
-      <div className="flex-1">
-        <POSSystem />
-      </div>
-    </div>
-  );
+  return <CustomerMenu />;
 };
 
 export default Index;
