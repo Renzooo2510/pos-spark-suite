@@ -317,7 +317,14 @@ export type Database = {
         | "logout"
         | "sale"
         | "inventory_update"
-      order_status: "pending" | "completed" | "cancelled"
+      order_status:
+        | "pending"
+        | "completed"
+        | "cancelled"
+        | "in_progress"
+        | "ready"
+        | "refunded"
+        | "voided"
       user_role: "admin" | "cashier" | "manager"
     }
     CompositeTypes: {
@@ -455,7 +462,15 @@ export const Constants = {
         "sale",
         "inventory_update",
       ],
-      order_status: ["pending", "completed", "cancelled"],
+      order_status: [
+        "pending",
+        "completed",
+        "cancelled",
+        "in_progress",
+        "ready",
+        "refunded",
+        "voided",
+      ],
       user_role: ["admin", "cashier", "manager"],
     },
   },
