@@ -23,6 +23,7 @@ import {
   FileText,
   Settings,
   LogOut,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 const navigationItems = [
   { name: "Dashboard", href: "/dashboard", icon: BarChart3, roles: ["admin", "owner", "manager", "cashier", "staff"] },
   { name: "Orders", href: "/orders", icon: ClipboardList, roles: ["admin", "owner", "manager", "cashier", "staff"] },
+  { name: "POS", href: "/pos", icon: CreditCard, roles: ["admin", "owner", "manager", "cashier", "staff"] },
   { name: "Sales", href: "/sales", icon: DollarSign, roles: ["admin", "owner", "manager", "cashier", "staff"] },
   { name: "Menu", href: "/menu", icon: MenuIcon, roles: ["admin", "owner", "manager"] },
   { name: "Accounts", href: "/accounts", icon: Users, roles: ["admin", "owner"] },

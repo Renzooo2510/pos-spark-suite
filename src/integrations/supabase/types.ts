@@ -206,6 +206,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_order_items_menu_item"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_order_items_order"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "order_items_menu_item_id_fkey"
             columns: ["menu_item_id"]
             isOneToOne: false

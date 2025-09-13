@@ -89,8 +89,8 @@ export default function Sales() {
         .from("order_items")
         .select(`
           *,
-          menu_items (name),
-          orders!inner (created_at, status)
+          menu_items!menu_item_id (name),
+          orders!order_id!inner (created_at, status)
         `)
         .gte("orders.created_at", startDate.toISOString())
         .lte("orders.created_at", endDate.toISOString())

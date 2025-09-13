@@ -88,11 +88,11 @@ export default function Analytics() {
         .from("order_items")
         .select(`
           *,
-          menu_items (
+          menu_items!menu_item_id (
             name,
-            categories (name)
+            categories!category_id (name)
           ),
-          orders!inner (created_at, status, cashier_id)
+          orders!order_id!inner (created_at, status, cashier_id)
         `)
         .gte("orders.created_at", startDate.toISOString())
         .lte("orders.created_at", endDate.toISOString())

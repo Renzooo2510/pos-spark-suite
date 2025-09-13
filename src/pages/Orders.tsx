@@ -77,7 +77,7 @@ export default function Orders() {
         .from("order_items")
         .select(`
           *,
-          menu_items (
+          menu_items!menu_item_id (
             name,
             description
           )
